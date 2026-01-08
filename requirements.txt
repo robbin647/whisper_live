@@ -1,0 +1,7 @@
+numpy==2.3.5 
+pyaudio==0.2.14 
+six==1.17.0 
+openai-whisper==20250625
+uvicorn==0.40.0
+fastapi==0.128.0
+websockets==15.0.1

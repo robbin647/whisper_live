@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Local Real-time Speech-to-Text (Whisper)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {},
+            }
+        }
+    </script>
+</head>
+<body class="max-w-4xl mx-auto my-8 px-4 font-sans">
+    <h1 class="text-2xl font-bold mb-4">Local Real-time Speech-to-Text (Whisper)</h1>
+    <div class="controls mb-8">
+        <button id="startBtn" class="bg-green-500 text-white border-0 px-8 py-3 text-lg mr-4 cursor-pointer hover:bg-green-600 transition-colors">Start Recording</button>
+        <button id="stopBtn" disabled class="bg-red-500 text-white border-0 px-8 py-3 text-lg mr-4 cursor-pointer hover:bg-red-600 transition-colors">Stop Recording</button>
+    </div>
+    <div class="status text-gray-600 my-4" id="status">Status: Not Connected</div>
+    <h3 class="text-xl font-semibold mb-2">Transcription Result:</h3>
+    <textarea id="transcription" class="border border-gray-400 p-4 w-[50vw] min-h-[300px] text-lg leading-relaxed whitespace-pre-wrap" rows="10" wrap="soft"></textarea>
+    <div class="controls mt-4">
+        <button id="resetBtn" class="bg-blue-500 text-white border-0 px-8 py-3 text-lg mr-4 cursor-pointer hover:bg-blue-600 transition-colors">Clear</button>
+    </div>
+    
+    <!-- YouTube-style subtitle layer -->
+    <div id="subtitleLayer" class="fixed left-0 top-[75vh] w-full h-[20vh] bg-black bg-opacity-50 flex items-center justify-center px-4 pointer-events-none z-50">
+        <div id="subtitleText" class="text-white text-3xl font-bold text-center max-w-4xl leading-relaxed"></div>
+    </div>
+
+    <script>
+        // Core Variables
+        let ws; // WebSocket Connection
+        let audioContext; // Audio Context
+        let audioStream; // Microphone Stream
+        let workletNode; // AudioWorklet Node
+        const transcriptionDiv = document.getElementById('transcription');
+        const subtitleText = document.getElementById('subtitleText');
+        const statusDiv = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        
+        // Subtitle management
+        let subtitleLines = []; // Array to keep track of subtitle lines
+        const MAX_SUBTITLE_LINES = 2; // Maximum number of lines to show in subtitle layer
+
+        const TARGET_SAMPLE_RATE = 16000; // Sample rate required by Whisper
+        let audioBuffer = []; // Accumulated audio data
+        const SEND_INTERVAL = 500; // Send every 500ms
+        let sendTimer = null;
+
+        // Initialize WebSocket Connection
+        function initWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}/ws`);
+            ws.onopen = () => {
+                statusDiv.textContent = 'Status: Connected (Waiting for Recording)';
+                console.log('WebSocket Connected');
+            };
+            ws.onmessage = (event) => {
+                // Receive transcription result from backend and append to page
+                const text = event.data;
+                if (!text.startsWith('[Error]')) {
+                    transcriptionDiv.textContent += text + ' ';
+                    
+                    // Update subtitle layer with line limit
+                    updateSubtitle(text + ' ');
+                } else {
+                    statusDiv.textContent = text;
+                }
+            };
+            ws.onclose = () => {
+                statusDiv.textContent = 'Status: Connection Disconnected';
+                resetUI();
+            };
+            ws.onerror = (error) => {
+                statusDiv.textContent = `Status: Connection Error - ${error}`;
+                resetUI();
+            };
+        }
+
+        // Start Recording
+        async function startRecording() {
+            try {
+                // Request microphone permission
+                audioStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: TARGET_SAMPLE_RATE
+                    }
+                });
+
+                // Create audio context
+                audioContext = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
+                const source = audioContext.createMediaStreamSource(audioStream);
+
+                // Use AudioWorklet instead of deprecated ScriptProcessorNode
+                await audioContext.audioWorklet.addModule('/static/audio-processor.js');
+                workletNode = new AudioWorkletNode(audioContext, 'audio-processor');
+
+                // Receive audio data from AudioWorklet
+                workletNode.port.onmessage = (event) => {
+                    const inputData = event.data;
+                    // Copy data to buffer
+                    audioBuffer.push(...inputData);
+                };
+
+                source.connect(workletNode);
+                workletNode.connect(audioContext.destination);
+
+                // Send audio data at regular intervals
+                sendTimer = setInterval(() => {
+                    if (audioBuffer.length > 0 && ws.readyState === WebSocket.OPEN) {
+                        const pcmData = convertToPCM16(audioBuffer);
+                        ws.send(pcmData);
+                        audioBuffer = []; // 清空缓冲区
+                    }
+                }, SEND_INTERVAL);
+
+                statusDiv.textContent = 'Status: Recording (Real-time Transcription)';
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } catch (error) {
+                console.error('Recording failed:', error);
+                statusDiv.textContent = `Status: Recording Failed - ${error.message}`;
+            }
+        }
+
+        // Stop Recording
+        function stopRecording() {
+            if (sendTimer) {
+                clearInterval(sendTimer);
+                sendTimer = null;
+            }
+            if (workletNode) {
+                workletNode.disconnect();
+                workletNode = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+            }
+            audioBuffer = [];
+            resetUI();
+            statusDiv.textContent = 'Status: Recording Stopped (Connection Maintained)';
+        }
+
+        // Convert Float32 audio data to 16-bit PCM
+        function convertToPCM16(floatData) {
+            const pcm16 = new Int16Array(floatData.length);
+            for (let i = 0; i < floatData.length; i++) {
+                const sample = Math.max(-1, Math.min(1, floatData[i]));
+                pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+            }
+            return pcm16.buffer;
+        }
+
+        // Reset UI State
+        function resetUI() {
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        }
+
+        // Update subtitle with line limit
+        function updateSubtitle(newText) {
+            // Split current subtitle into words
+            const currentWords = subtitleText.textContent.split(' ');
+            const newWords = newText.split(' ');
+            
+            // Combine all words
+            const allWords = [...currentWords, ...newWords];
+            
+            // Estimate words per line based on average word length and container width
+            const estimatedWordsPerLine = 12; // Adjust based on your needs
+            
+            // Calculate number of lines
+            const totalWords = allWords.length;
+            const totalLines = Math.ceil(totalWords / estimatedWordsPerLine);
+            
+            if (totalLines > MAX_SUBTITLE_LINES) {
+                // Keep only the words needed for the last MAX_SUBTITLE_LINES lines
+                const wordsToKeep = estimatedWordsPerLine * MAX_SUBTITLE_LINES;
+                const lastWords = allWords.slice(-wordsToKeep);
+                subtitleText.textContent = lastWords.join(' ');
+            } else {
+                // Simply append the new text
+                subtitleText.textContent += newText;
+            }
+        }
+        
+        // Clear Transcription Result
+        function clearTranscription() {
+            transcriptionDiv.textContent = '';
+            subtitleText.textContent = '';
+        }
+
+        // Bind Button Events
+        startBtn.addEventListener('click', async () => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                initWebSocket();
+                // Wait for WebSocket connection to establish before starting recording
+                setTimeout(startRecording, 1000);
+            } else {
+                startRecording();
+            }
+        });
+
+        resetBtn.addEventListener('click', clearTranscription);
+
+        stopBtn.addEventListener('click', stopRecording);
+
+        // Initialize WebSocket when page loads
+        window.onload = initWebSocket;
+
+        // Close connection when page closes
+        window.onbeforeunload = () => {
+            if (ws) ws.close();
+            stopRecording();
+        };
+    </script>
+</body>
+</html>
