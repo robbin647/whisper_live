@@ -20,9 +20,10 @@
     </div>
     <div class="status text-gray-600 my-4" id="status">Status: Not Connected</div>
     <h3 class="text-xl font-semibold mb-2">Transcription Result:</h3>
-    <textarea id="transcription" class="border border-gray-400 p-4 w-[50vw] min-h-[300px] text-lg leading-relaxed whitespace-pre-wrap" rows="10" wrap="soft"></textarea>
-    <div class="controls mt-4">
+    <div id="transcription" class="border border-gray-400 p-4 w-[50vw] min-h-[300px] text-lg leading-relaxed whitespace-pre-wrap overflow-y-auto bg-white"></div>
+    <div class="controls mt-4 flex items-center">
         <button id="resetBtn" class="bg-blue-500 text-white border-0 px-8 py-3 text-lg mr-4 cursor-pointer hover:bg-blue-600 transition-colors">Clear</button>
+        <div id="werDisplay" class="text-lg font-semibold text-gray-700">Word Error Rate (WER): 0.00%</div>
     </div>
     
     <!-- YouTube-style subtitle layer -->
@@ -37,6 +38,7 @@
         let audioStream; // Microphone Stream
         let workletNode; // AudioWorklet Node
         const transcriptionDiv = document.getElementById('transcription');
+        const werDisplay = document.getElementById('werDisplay');
         const subtitleText = document.getElementById('subtitleText');
         const statusDiv = document.getElementById('status');
         const startBtn = document.getElementById('startBtn');
@@ -114,7 +116,7 @@
                     if (audioBuffer.length > 0 && ws.readyState === WebSocket.OPEN) {
                         const pcmData = convertToPCM16(audioBuffer);
                         ws.send(pcmData);
-                        audioBuffer = []; // 清空缓冲区
+                        audioBuffer = []; // clear buffer
                     }
                 }, SEND_INTERVAL);
 
@@ -145,9 +147,13 @@
                 audioStream.getTracks().forEach(track => track.stop());
                 audioStream = null;
             }
+            
+            // Convert text to clickable word elements for WER calculation
+            processTranscriptionForWER();
+            
             audioBuffer = [];
             resetUI();
-            statusDiv.textContent = 'Status: Recording Stopped (Connection Maintained)';
+            statusDiv.textContent = 'Status: Recording Stopped (Review Mode)';
         }
 
         // Convert Float32 audio data to 16-bit PCM
@@ -192,11 +198,68 @@
                 subtitleText.textContent += newText;
             }
         }
+
+        // New function to transform text into clickable spans for WER calculation
+        function processTranscriptionForWER() {
+            const fullText = transcriptionDiv.textContent.trim();
+            if (!fullText) return;
+
+            // Split by whitespace
+            const words = fullText.split(/\s+/);
+            transcriptionDiv.innerHTML = ''; // Clear current text
+
+            words.forEach(word => {
+                if (!word) return;
+                const span = document.createElement('span');
+                span.textContent = word + ' ';
+                span.className = 'cursor-pointer hover:bg-gray-100 transition-colors px-0.5 rounded';
+                
+                // Toggle selection on click
+                span.onclick = () => {
+                    if (span.style.backgroundColor === 'pink') {
+                        span.style.backgroundColor = '';
+                    } else {
+                        span.style.backgroundColor = 'pink';
+                    }
+                    calculateWER();
+                };
+
+                transcriptionDiv.appendChild(span);
+            });
+            
+            calculateWER();
+        }
+
+        // New function to calculate WER
+        function calculateWER() {
+            const spans = transcriptionDiv.querySelectorAll('span');
+            let wrongWords = 0;
+            let totalValidWords = 0;
+
+            // Regex to identify if a "word" is just punctuation
+            const punctuationRegex = /^[.,\/#!$%\^&\*;:{}=\-_`~()]+$/;
+
+            spans.forEach(span => {
+                const text = span.textContent.trim();
+                
+                // Skip purely punctuation elements for the denominator
+                if (text && !punctuationRegex.test(text)) {
+                    totalValidWords++;
+                    if (span.style.backgroundColor === 'pink') {
+                        wrongWords++;
+                    }
+                }
+            });
+
+            const wer = totalValidWords > 0 ? (wrongWords / totalValidWords) * 100 : 0;
+            werDisplay.textContent = `Word Error Rate (WER): ${wer.toFixed(2)}% (${wrongWords}/${totalValidWords})`;
+        }
         
         // Clear Transcription Result
         function clearTranscription() {
             transcriptionDiv.textContent = '';
             subtitleText.textContent = '';
+            werDisplay.textContent = 'Word Error Rate (WER): 0.00%';
         }
 
         // Bind Button Events

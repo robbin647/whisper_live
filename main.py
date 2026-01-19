@@ -65,7 +65,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Perform transcription (use Whisper's transcribe with real-time-oriented parameters)
                 result = model.transcribe(
                     full_audio,
-                    language="zh",  # specify language ("zh" for Chinese, "en" for English, leave empty for auto)
+                    language="en",  # specify language ("zh" for Chinese, "en" for English, leave empty for auto)
                     fp16=torch.cuda.is_available(),  # enable FP16 on GPU for acceleration
                     verbose=False,  # disable verbose logging
                     no_speech_threshold=0.1,  # lower no-speech threshold
