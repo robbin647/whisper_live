@@ -4,7 +4,7 @@ This is the repo for a single-page Web app that displays live captions by using 
 
 ## Getting Started
 
-### Step 1 - Install uv package manager
+### Step 1 - Install uv package manager and Python
 
 **Windows:**
 ```powershell
@@ -16,10 +16,17 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### Step 2 - Create and activate a virtual environment
+Then, run the following command to have Python 3.12 installed.
+
+```bash
+uv python install 3.12
+```
+
+### Step 2 - Install python and activate a virtual environment
 
 ```bash
 cd /path/to/your/downloaded/code
+
 uv init && uv venv
 ```
 
@@ -33,15 +40,22 @@ uv init && uv venv
 uv pip install -r requirements.txt
 ```
 
-The command-line tool ffmpeg should also be installed on your system. Please visit their website: [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+The command-line tool `ffmpeg` should also be installed on your system. 
 
-If prompted, you may need to install librosa:
+**Windows / Mac **   
+Visit official website: [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html), you can find download link under the  "Get packages & executable files" section.
+
+
+**Linux **
 
 ```bash
-uv add librosa
+mkdir -p ~/.local/bin && \
+wget https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v6.1/ffmpeg-6.1-linux-64.zip && \
+unzip -d ~/.local/bin ffmpeg-6.1-linux-64.zip && \
+export PATH="$(realpath ~/.local/bin):$PATH"
 ```
 
-### Step 4 - Run FastAPI server
+### Step 4 - Start FastAPI server
 
 ```bash
 uv run main.py
