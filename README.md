@@ -2,15 +2,15 @@
 
 This is the repo for a single-page Web app that displays live captions by using an OpenAI Whisper model.
 
-## Getting Started - Auto Installation (recommended)
+## Getting Started - Auto Installation (Recommended for Windows & Linux users)
 
 Depending on your system, you can find automatic installation scripts under the root folder.
 
 **Windows:** `install_windows.ps1` (Open Terminal app, `cd` to where you download the code, run `.\install_windows.ps1`)    
 
-**Mac:** `install_mac.sh` (Open terminal, `cd` to where you download the code, run `sh install_mac.sh`. If you see an Rosetta warning, run exactly the following: `arch -arm64 zsh -lc './install_mac.sh'`)    
-
 **Linux:** `install_linux.sh` (Inside terminal, `cd` to where you download the code, run `sh install_linux.sh`)    
+
+**For Mac user:** There is an installation script under development: `install_mac.sh` (If you see an Rosetta warning, run exactly the following: `arch -arm64 zsh -lc './install_mac.sh'`). You can try running it but there is high chance of installation failure due to hardware/architecture compatibility issues on Mac. We recommend that Mac users use the [Manual Configuration](#getting-started---manual-configuration) below.     
 
 ## Getting Started - Manual Configuration 
 

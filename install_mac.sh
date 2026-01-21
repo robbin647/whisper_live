@@ -51,7 +51,7 @@ echo "Installing Python dependencies..."
 # it expects a `cmake` executable to be available on PATH. Disabling build isolation
 # for llvmlite lets it see tools installed into the project environment (including
 # the PyPI `cmake` package), avoiding "cmake not found" build failures.
-uv sync --python .venv --no-build-isolation-package llvmlite
+uv pip install -r requirements.txt --python .venv --no-build-isolation-package llvmlite
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
   if command -v brew >/dev/null 2>&1; then
