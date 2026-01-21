@@ -2,7 +2,17 @@
 
 This is the repo for a single-page Web app that displays live captions by using an OpenAI Whisper model.
 
-## Getting Started
+## Getting Started - Auto Installation (recommended)
+
+Depending on your system, you can find automatic installation scripts under the root folder.
+
+**Windows:** `install_windows.ps1` (Open Terminal app, `cd` to where you download the code, run `.\install_windows.ps1`)    
+
+**Mac:** `install_mac.sh` (Open terminal, `cd` to where you download the code, run `sh install_mac.sh`)    
+
+**Linux:** `install_linux.sh` (Inside terminal, `cd` to where you download the code, run `sh install_mac.sh`)    
+
+## Getting Started - Manual Configuration 
 
 ### Step 1 - Install uv package manager and Python
 
