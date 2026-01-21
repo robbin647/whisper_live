@@ -8,9 +8,9 @@ Depending on your system, you can find automatic installation scripts under the 
 
 **Windows:** `install_windows.ps1` (Open Terminal app, `cd` to where you download the code, run `.\install_windows.ps1`)    
 
-**Mac:** `install_mac.sh` (Open terminal, `cd` to where you download the code, run `sh install_mac.sh`)    
+**Mac:** `install_mac.sh` (Open terminal, `cd` to where you download the code, run `sh install_mac.sh`. If you see an Rosetta warning, run exactly the following: `arch -arm64 zsh -lc './install_mac.sh'`)    
 
-**Linux:** `install_linux.sh` (Inside terminal, `cd` to where you download the code, run `sh install_mac.sh`)    
+**Linux:** `install_linux.sh` (Inside terminal, `cd` to where you download the code, run `sh install_linux.sh`)    
 
 ## Getting Started - Manual Configuration 
 
@@ -40,6 +40,10 @@ cd /path/to/your/downloaded/code
 uv init && uv venv
 ```
 
+> Additional note for Mac users: When running the last command, you may hit an error 
+> saying `cmake` is not found. In such case please run `brew install cmake` 
+> first, then re-run the last command.
+
 **Activate the environment:**
 - Mac & Linux: `source .venv/bin/activate`
 - Windows: `.venv\Scripts\activate`
@@ -47,12 +51,12 @@ uv init && uv venv
 ### Step 3 - Install whisper and other necessary dependencies
 
 ```bash
-uv pip install -r requirements.txt
+uv sync --python .venv
 ```
 
 The command-line tool `ffmpeg` should also be installed on your system. 
 
-**Windows / Mac **   
+**Windows / Mac:**   
 Visit official website: [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html), you can find download link under the  "Get packages & executable files" section.
 
 
