@@ -8,7 +8,7 @@ Depending on your system, you can find automatic installation scripts under the 
 
 **Windows:** `install_windows.ps1` (Open Terminal app, `cd` to where you download the code, run `.\install_windows.ps1`)    
 
-**Linux:** `install_linux.sh` (Inside terminal, `cd` to where you download the code, run `sh install_linux.sh`)    
+**Linux:** `install_linux.sh` (Inside terminal, `cd` to where you download the code, run `sudo bash install_linux.sh`)    
 
 **For Mac user:** There is an installation script under development: `install_mac.sh` (If you see an Rosetta warning, run exactly the following: `arch -arm64 zsh -lc './install_mac.sh'`). You can try running it but there is high chance of installation failure due to hardware/architecture compatibility issues on Mac. We recommend that Mac users use the [Manual Configuration](#getting-started---manual-configuration) below.     
 
